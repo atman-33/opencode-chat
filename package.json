@@ -101,15 +101,21 @@
     }
   },
   "scripts": {
-    "copy-templates": "mkdir -p out/webview/templates && cp src/webview/templates/*.html out/webview/templates/",
+    "copy-templates": "shx mkdir -p out/webview/templates && shx cp src/webview/templates/*.html out/webview/templates/",
     "compile": "tsc -p ./ && npm run copy-templates",
     "publish": "npm run compile && vsce publish && ovsx publish",
     "watch": "npm run copy-templates && tsc -w -p ./"
   },
   "devDependencies": {
+    "@types/cross-spawn": "^6.0.6",
     "@types/node": "^18.0.0",
     "@types/vscode": "^1.80.0",
+    "shx": "^0.4.0",
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "cross-spawn": "^7.0.3",
+    "tree-kill": "^1.2.2"
   },
   "license": "MIT"
 }
