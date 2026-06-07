@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
-import { ChildProcess, spawn } from "child_process";
+import { ChildProcess } from "child_process";
+import spawn from "cross-spawn";
+import treeKill from "tree-kill";
 import * as http from "http";
 import { OpencodeViewProvider } from "../webview/OpencodeViewProvider";
 import { startWebviewProxy } from "../proxy/WebviewProxy";
@@ -163,8 +165,8 @@ export class ServerManager {
       this.proxyServer.close();
       this.proxyServer = undefined;
     }
-    if (this.serverProcess) {
-      this.serverProcess.kill();
+    if (this.serverProcess && this.serverProcess.pid) {
+      treeKill(this.serverProcess.pid);
       this.serverProcess = undefined;
     }
   }
