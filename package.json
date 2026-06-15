@@ -1,10 +1,10 @@
 {
-  "name": "opencode-chat-unofficial",
-  "displayName": "opencode chat",
-  "description": "opencode chat extension for local and remote VS Code workspaces",
-  "repository": "https://github.com/kwickramasekara/opencode-chat",
-  "publisher": "kwickramasekara",
-  "version": "2.11.0",
+  "name": "opencode-chat-unofficial-custom",
+  "displayName": "opencode chat (custom)",
+  "description": "A custom fork of the opencode chat extension for local and remote VS Code workspaces",
+  "repository": "https://github.com/atman-33/opencode-chat",
+  "publisher": "atman-33",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.80.0"
   },
