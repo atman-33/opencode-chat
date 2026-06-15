@@ -103,6 +103,9 @@
   "scripts": {
     "copy-templates": "shx mkdir -p out/webview/templates && shx cp src/webview/templates/*.html out/webview/templates/",
     "compile": "tsc -p ./ && npm run copy-templates",
+    "build": "npm run compile",
+    "vscode:prepublish": "npm run compile",
+    "package": "vsce package",
     "publish": "npm run compile && vsce publish && ovsx publish",
     "watch": "npm run copy-templates && tsc -w -p ./"
   },
