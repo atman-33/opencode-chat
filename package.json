@@ -3,7 +3,8 @@
   "displayName": "opencode chat (custom)",
   "description": "A custom fork of the opencode chat extension for local and remote VS Code workspaces",
   "repository": "https://github.com/atman-33/opencode-chat",
-  "publisher": "atman-33",
+  "author": "atman-33",
+  "publisher": "atman-dev",
   "version": "0.1.0",
   "engines": {
     "vscode": "^1.80.0"
