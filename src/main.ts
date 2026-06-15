@@ -10,7 +10,12 @@ const SIDEBAR_CMDS = {
 } as const;
 
 export function activate(context: vscode.ExtensionContext) {
-  const config = vscode.workspace.getConfiguration("opencode");
+  const logger = vscode.window.createOutputChannel("OpenCode");
+  context.subscriptions.push(logger);
+  logger.appendLine("[OpenCode] Extension activating");
+
+  try {
+    const config = vscode.workspace.getConfiguration("opencode");
 
   // If the user specified a port in settings, use it. Otherwise reuse the
   // port from the last session so the iframe origin stays the same across
@@ -32,7 +37,7 @@ export function activate(context: vscode.ExtensionContext) {
   const opencodePath = config.get<string>("path", "").trim();
 
   // Register the webview panel provider
-  const provider = new OpencodeViewProvider(context.extensionUri);
+  const provider = new OpencodeViewProvider(context.extensionUri, logger);
   provider.setDevMode(context.extensionMode === vscode.ExtensionMode.Development);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider("opencode.chatView", provider, {
@@ -41,7 +46,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   // Start the opencode server
-  serverManager = new ServerManager();
+  serverManager = new ServerManager(logger);
   serverManager.start(
     provider,
     context,
@@ -144,7 +149,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       serverManager?.dispose();
       provider.setLoading();
-      serverManager = new ServerManager();
+      serverManager = new ServerManager(logger);
       serverManager.start(
         provider,
         context,
@@ -177,6 +182,12 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
   );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.appendLine(`[OpenCode] Activation failed: ${message}`);
+    vscode.window.showErrorMessage(`OpenCode activation failed: ${message}`);
+    throw err;
+  }
 }
 
 export function deactivate() {

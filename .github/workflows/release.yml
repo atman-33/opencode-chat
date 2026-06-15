@@ -112,13 +112,15 @@ jobs:
             ---
             See below for auto-generated release notes.
 
-      # Publish to both registries (idempotent)
+      # Publish the identical pre-built VSIX to both registries (idempotent).
+      # The VSIX was built above with `vsce package`, which includes runtime
+      # dependencies and runs the prepublish compile step.
       - name: Publish to VS Code Marketplace
         uses: HaaLeo/publish-vscode-extension@v2
         with:
           pat: ${{ secrets.VSCE_PAT }}
           registryUrl: https://marketplace.visualstudio.com
-          dependencies: false
+          extensionFile: opencode-chat-unofficial-custom-${{ steps.get_version.outputs.VERSION }}.vsix
           skipDuplicate: true
 
       - name: Publish to Open VSX
@@ -126,5 +128,5 @@ jobs:
         with:
           pat: ${{ secrets.OPEN_VSX_TOKEN }}
           registryUrl: https://open-vsx.org
-          dependencies: false
+          extensionFile: opencode-chat-unofficial-custom-${{ steps.get_version.outputs.VERSION }}.vsix
           skipDuplicate: true

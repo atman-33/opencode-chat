@@ -11,7 +11,10 @@ export class OpencodeViewProvider implements vscode.WebviewViewProvider {
   private _sidebarType: "primary" | "auxiliary" | null = null;
   private _isDevMode = false;
 
-  constructor(private readonly _extensionUri: vscode.Uri) {}
+  constructor(
+    private readonly _extensionUri: vscode.Uri,
+    private readonly _logger: vscode.OutputChannel,
+  ) {}
 
   setDevMode(enabled: boolean) {
     this._isDevMode = enabled;
@@ -57,6 +60,7 @@ export class OpencodeViewProvider implements vscode.WebviewViewProvider {
   }
 
   setServerUrl(url: string) {
+    this._logger.appendLine(`[OpenCode] Setting server URL: ${url}`);
     this._serverUrl = url;
     this._error = undefined;
     this._renderCurrentState();
@@ -69,39 +73,71 @@ export class OpencodeViewProvider implements vscode.WebviewViewProvider {
   }
 
   setError(message: string, showInstallHint = true) {
+    this._logger.appendLine(`[OpenCode] Setting error: ${message}`);
     this._error = { message, showInstallHint };
     this._serverUrl = undefined;
     this._renderCurrentState();
   }
 
   setLoading() {
+    this._logger.appendLine("[OpenCode] Setting loading state");
     this._serverUrl = undefined;
     this._error = undefined;
     this._renderCurrentState();
   }
 
   private _renderCurrentState() {
-    if (!this._view) return;
-
-    if (this._error) {
-      this._view.webview.html = this._getErrorHtml(
-        this._error.message,
-        this._error.showInstallHint,
+    if (!this._view) {
+      this._logger.appendLine(
+        "[OpenCode] _renderCurrentState called before view resolved; deferring.",
       );
       return;
     }
 
-    if (this._serverUrl) {
-      this._view.webview.html = this._getIframeHtml(this._serverUrl);
-      return;
-    }
+    try {
+      if (this._error) {
+        this._view.webview.html = this._getErrorHtml(
+          this._error.message,
+          this._error.showInstallHint,
+        );
+        return;
+      }
 
-    this._setLoadingHtml();
+      if (this._serverUrl) {
+        this._view.webview.html = this._getIframeHtml(this._serverUrl);
+        return;
+      }
+
+      this._setLoadingHtml();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this._logger.appendLine(
+        `[OpenCode] Failed to render view state: ${message}`,
+      );
+      try {
+        this._view.webview.html = this._getErrorHtml(
+          `Failed to render view: ${message}`,
+          false,
+        );
+      } catch {
+        // Last resort: show a plain error so the view is not stuck loading.
+        this._view.webview.html = `<!doctype html><html><body style="color:var(--vscode-foreground);font-family:var(--vscode-font-family);padding:20px;">Failed to render OpenCode view: ${message}</body></html>`;
+      }
+    }
   }
 
   private _readTemplate(name: string): string {
     const templatePath = path.join(__dirname, "templates", name);
-    return fs.readFileSync(templatePath, "utf-8");
+    this._logger.appendLine(`[OpenCode] Reading template: ${templatePath}`);
+    try {
+      return fs.readFileSync(templatePath, "utf-8");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this._logger.appendLine(
+        `[OpenCode] Failed to read template ${name}: ${message}`,
+      );
+      throw err;
+    }
   }
 
   private _processTemplate(name: string): string {

@@ -10,6 +10,8 @@ export class ServerManager {
   private serverProcess: ChildProcess | undefined;
   private proxyServer: http.Server | undefined;
 
+  constructor(private readonly _logger: vscode.OutputChannel) {}
+
   async start(
     provider: OpencodeViewProvider,
     context: vscode.ExtensionContext,
@@ -19,11 +21,14 @@ export class ServerManager {
     opencodePath: string = "",
   ): Promise<void> {
     const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    this._logger.appendLine(`[OpenCode] Starting server (port=${port}, proxyPort=${proxyPort}, exposeToNetwork=${exposeToNetwork}, opencodePath=${opencodePath || "<PATH>"})`);
 
     if (!cwd) {
+      this._logger.appendLine("[OpenCode] No workspace folder open");
       provider.setError("No workspace folder open.", false);
       return;
     }
+    this._logger.appendLine(`[OpenCode] Workspace: ${cwd}`);
 
     // Persist the port so we can reuse it next time (preserves iframe localStorage)
     context.globalState.update("opencode.serverPort", port);
@@ -33,9 +38,11 @@ export class ServerManager {
 
     const setWebviewServerUrl = async (url: URL) => {
       url.pathname = workspacePath;
+      this._logger.appendLine(`[OpenCode] Resolving external URI: ${url.toString()}`);
       const externalUri = await vscode.env.asExternalUri(
         vscode.Uri.parse(url.toString()),
       );
+      this._logger.appendLine(`[OpenCode] External URI resolved: ${externalUri.toString()}`);
       provider.setServerUrl(externalUri.toString());
     };
 
@@ -44,6 +51,7 @@ export class ServerManager {
     // reuse it instead of spinning up a second proxy (which would land on a
     // different port → different origin → lost localStorage preferences).
     const serveViaProxy = async (serverUrl: string) => {
+      this._logger.appendLine(`[OpenCode] Serving via proxy: ${serverUrl}`);
       try {
         const parsed = new URL(serverUrl);
         const realPort = parseInt(parsed.port, 10);
@@ -53,6 +61,7 @@ export class ServerManager {
           proxyPort > 0 &&
           (await this.isServerAlive(`http://localhost:${proxyPort}`))
         ) {
+          this._logger.appendLine(`[OpenCode] Reusing existing proxy on port ${proxyPort}`);
           // Proxy already running — just reuse it (no new server to track).
           await setWebviewServerUrl(
             new URL(`http://localhost:${proxyPort}`),
@@ -60,15 +69,19 @@ export class ServerManager {
           return;
         }
 
+        this._logger.appendLine(`[OpenCode] Starting webview proxy on port ${proxyPort}`);
         const result = await startWebviewProxy(realPort, proxyPort);
         this.proxyServer = result.server;
+        this._logger.appendLine(`[OpenCode] Webview proxy listening on port ${result.port}`);
 
         if (result.port !== proxyPort) {
           context.globalState.update("opencode.proxyPort", result.port);
         }
 
         await setWebviewServerUrl(new URL(`http://localhost:${result.port}`));
-      } catch {
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        this._logger.appendLine(`[OpenCode] Proxy failed: ${message}. Falling back to direct URL.`);
         // Fallback: serve without proxy
         try {
           const u = new URL(serverUrl);
@@ -85,10 +98,13 @@ export class ServerManager {
     // Check if a server from the previous session is still running on this port.
     // If so, just reuse it instead of spawning a new one.
     const existingUrl = `http://localhost:${port}`;
+    this._logger.appendLine(`[OpenCode] Checking for existing server: ${existingUrl}`);
     if (await this.isServerAlive(existingUrl)) {
+      this._logger.appendLine("[OpenCode] Existing server found; reusing");
       await serveViaProxy(existingUrl);
       return;
     }
+    this._logger.appendLine("[OpenCode] No existing server found; spawning opencode");
 
     try {
       const args = ["serve", "--port", port.toString()];
@@ -96,6 +112,7 @@ export class ServerManager {
         args.push("--mdns");
       }
       const opencodeCommand = opencodePath.trim() || "opencode";
+      this._logger.appendLine(`[OpenCode] Spawning: ${opencodeCommand} ${args.join(" ")}`);
 
       this.serverProcess = spawn(opencodeCommand, args, {
         cwd,
@@ -117,6 +134,7 @@ export class ServerManager {
       // Parse stdout/stderr for the server URL
       const handleOutput = (data: Buffer) => {
         const output = data.toString();
+        this._logger.appendLine(`[OpenCode] opencode output: ${output.trim()}`);
         const match = output.match(/https?:\/\/[^\s]+/);
         if (match) onUrl(match[0]);
       };
@@ -125,6 +143,8 @@ export class ServerManager {
       this.serverProcess.stderr?.on("data", handleOutput);
 
       this.serverProcess.on("error", (err) => {
+        const message = err instanceof Error ? err.message : String(err);
+        this._logger.appendLine(`[OpenCode] opencode process error: ${message}`);
         if (resolved) return;
         resolved = true;
         if ((err as NodeJS.ErrnoException).code === "ENOENT") {
@@ -141,6 +161,7 @@ export class ServerManager {
       });
 
       this.serverProcess.on("exit", (code) => {
+        this._logger.appendLine(`[OpenCode] opencode process exited with code ${code}`);
         if (code !== null && code !== 0) {
           if (!resolved) {
             resolved = true;
@@ -153,9 +174,12 @@ export class ServerManager {
 
       // Fallback: if we don't see a URL in stdout after 5s, just try the expected URL
       setTimeout(() => {
+        this._logger.appendLine(`[OpenCode] Fallback: trying expected URL http://localhost:${port}`);
         onUrl(`http://localhost:${port}`);
       }, 5000);
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this._logger.appendLine(`[OpenCode] Failed to start server: ${message}`);
       provider.setError("Failed to start the OpenCode server.");
     }
   }
