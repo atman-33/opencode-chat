@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-15
+
+### Changed
+
+- Updated publisher information in `package.json`.
+
 ## [0.1.0] - 2026-06-15
 
 ### Added
