@@ -1,10 +1,12 @@
-# opencode chat
+# opencode chat (custom)
 
-Unofficial extension that integrates the webview of opencode chat into your IDE.
+A custom fork of the unofficial extension that integrates the webview of opencode chat into your IDE.
 
-![Preview](https://raw.githubusercontent.com/kwickramasekara/opencode-chat/refs/heads/main/preview.png)
+This repository is derived from the original project [kwickramasekara/opencode-chat](https://github.com/kwickramasekara/opencode-chat) and is maintained independently at [atman-33/opencode-chat](https://github.com/atman-33/opencode-chat).
 
-> Please note: This extension used to be published under `kwickramasekara.opencode-chat` but was renamed to `kwickramasekara.opencode-chat-unofficial` to avoid confusion with another extension with the same name.
+![Preview](https://raw.githubusercontent.com/atman-33/opencode-chat/refs/heads/main/preview.png)
+
+> Please note: This extension is a fork of `kwickramasekara.opencode-chat-unofficial` and is published under a different identifier to reflect its custom nature.
 
 ## Features
 
